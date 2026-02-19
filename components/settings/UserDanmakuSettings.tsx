@@ -5,6 +5,7 @@ import { SettingsSection } from './SettingsSection';
 import { Icons } from '@/components/ui/Icon';
 import { userSourcesStore, type DanmakuApiEntry } from '@/lib/store/user-sources-store';
 import { settingsStore } from '@/lib/store/settings-store';
+import { hasPermission } from '@/lib/store/auth-store';
 
 export function UserDanmakuSettings() {
   const [apis, setApis] = useState<DanmakuApiEntry[]>([]);
@@ -100,7 +101,9 @@ export function UserDanmakuSettings() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-[var(--text-color)]">使用系统默认</p>
               {systemApiUrl && (
-                <p className="text-[10px] text-[var(--text-color-secondary)] truncate">{systemApiUrl}</p>
+                <p className="text-[10px] text-[var(--text-color-secondary)] truncate">
+                  {hasPermission('danmaku_api') ? systemApiUrl : '内置 API'}
+                </p>
               )}
               {!systemApiUrl && (
                 <p className="text-[10px] text-[var(--text-color-secondary)]">未配置系统弹幕 API</p>

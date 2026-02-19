@@ -58,6 +58,8 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange }: IPTV
   const [error, setError] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sidebarVisibleCount, setSidebarVisibleCount] = useState(100);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -437,10 +439,19 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange }: IPTV
   const VolumeIcon = isMuted || volume === 0 ? Icons.VolumeX : volume < 0.5 ? Icons.Volume1 : Icons.Volume2;
 
   const filteredSidebarChannels = useMemo(() => {
-    if (!sidebarSearch.trim()) return channels;
-    const q = sidebarSearch.toLowerCase().trim();
+    if (!debouncedSearch.trim()) return channels;
+    const q = debouncedSearch.toLowerCase().trim();
     return channels.filter(ch => ch.name.toLowerCase().includes(q));
-  }, [channels, sidebarSearch]);
+  }, [channels, debouncedSearch]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(sidebarSearch);
+      setSidebarVisibleCount(100);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [sidebarSearch]);
 
   return (
     <div
@@ -659,7 +670,7 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange }: IPTV
             </div>
           </div>
           <div className="p-1">
-            {filteredSidebarChannels.map((ch, i) => {
+            {filteredSidebarChannels.slice(0, sidebarVisibleCount).map((ch, i) => {
               const isActive = ch.name === channel.name && ch.url === channel.url;
               return (
                 <button
@@ -696,6 +707,17 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange }: IPTV
                 </button>
               );
             })}
+            {filteredSidebarChannels.length > sidebarVisibleCount && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSidebarVisibleCount(prev => prev + 100);
+                }}
+                className="w-full py-2 text-xs text-white/50 hover:text-white/80 transition-colors cursor-pointer"
+              >
+                显示更多 ({filteredSidebarChannels.length - sidebarVisibleCount} 个频道)
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -91,8 +91,10 @@ export async function GET(request: NextRequest) {
       contentType.includes('x-mpegURL');
 
     // If content-type is ambiguous, check the response body for M3U header
+    // Use clone() to avoid consuming the original body for binary streams
     if (!isM3u8 && (contentType.includes('text/plain') || contentType.includes('application/octet-stream') || !contentType)) {
-      const text = await response.text();
+      const cloned = response.clone();
+      const text = await cloned.text();
       if (text.trimStart().startsWith('#EXTM3U') || text.trimStart().startsWith('#EXT-X-')) {
         isM3u8 = true;
       }
@@ -111,8 +113,9 @@ export async function GET(request: NextRequest) {
           },
         });
       }
-      // Not M3U8, return original text as binary-like response
-      return new NextResponse(text, {
+      // Not M3U8, stream original binary body directly to preserve data integrity
+      const body = response.body;
+      return new NextResponse(body, {
         status: response.status,
         headers: {
           'Content-Type': contentType || 'video/mp2t',

@@ -81,7 +81,8 @@ export function SourceBadgeList({ sources, selectedSources, onToggleSource }: So
     }, [sources, onToggleSource]),
   });
 
-  // Check if content has overflow on mount and when sources change
+  // Check if content has overflow on mount and when source count changes
+  const hasCheckedOverflow = useRef(false);
   useEffect(() => {
     const checkOverflow = () => {
       if (badgeContainerRef.current) {
@@ -91,10 +92,13 @@ export function SourceBadgeList({ sources, selectedSources, onToggleSource }: So
     };
 
     checkOverflow();
-    // Recheck after a short delay to account for animations
-    const timeout = setTimeout(checkOverflow, 100);
-    return () => clearTimeout(timeout);
-  }, [sources]);
+    // Only do delayed recheck on first measurement
+    if (!hasCheckedOverflow.current) {
+      hasCheckedOverflow.current = true;
+      const timeout = setTimeout(checkOverflow, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [sources.length]);
 
   return (
     <>
@@ -105,7 +109,7 @@ export function SourceBadgeList({ sources, selectedSources, onToggleSource }: So
         role="group"
         aria-label="视频源筛选"
       >
-        <div className={`relative transition-all duration-300 z-10 ${!isExpanded ? 'max-h-[50px] overflow-hidden' : 'overflow-visible'
+        <div className={`relative transition-[max-height] duration-300 z-10 ${!isExpanded ? 'max-h-[50px] overflow-hidden' : 'overflow-visible'
           }`}>
           <div
             ref={badgeContainerRef}

@@ -8,6 +8,7 @@ import { Icons } from '@/components/ui/Icon';
 import { LatencyBadge } from '@/components/ui/LatencyBadge';
 import { Button } from '@/components/ui/Button';
 import { useKeyboardNavigation } from '@/lib/hooks/useKeyboardNavigation';
+import { settingsStore } from '@/lib/store/settings-store';
 
 interface Episode {
   name?: string;
@@ -72,6 +73,17 @@ export function EpisodeList({
     });
   }, [sources, latencies]);
 
+  // Resolve source ID to its actual baseUrl for pinging
+  const getSourcePingUrl = useCallback((sourceId: string): string | null => {
+    const settings = settingsStore.getSettings();
+    const allConfigs = [
+      ...settings.sources,
+      ...settings.premiumSources,
+    ];
+    const config = allConfigs.find(s => s.id === sourceId);
+    return config?.baseUrl || null;
+  }, []);
+
   // Initialize latencies from sources
   useEffect(() => {
     if (!sources) return;
@@ -93,10 +105,12 @@ export function EpisodeList({
         const results = await Promise.all(
           missing.map(async (source) => {
             try {
+              const pingUrl = getSourcePingUrl(source.source);
+              if (!pingUrl) return { source: source.source, latency: undefined };
               const response = await fetch('/api/ping', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: source.source }),
+                body: JSON.stringify({ url: pingUrl }),
               });
               if (response.ok) {
                 const data = await response.json();
@@ -116,7 +130,7 @@ export function EpisodeList({
       };
       autoRefresh();
     }
-  }, [sources]);
+  }, [sources, getSourcePingUrl]);
 
   // Refresh latencies
   const refreshLatencies = useCallback(async () => {
@@ -126,10 +140,12 @@ export function EpisodeList({
     const results = await Promise.all(
       sources.map(async (source) => {
         try {
+          const pingUrl = getSourcePingUrl(source.source);
+          if (!pingUrl) return { source: source.source, latency: undefined };
           const response = await fetch('/api/ping', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: source.source }),
+            body: JSON.stringify({ url: pingUrl }),
           });
           if (response.ok) {
             const data = await response.json();
@@ -150,7 +166,7 @@ export function EpisodeList({
     });
     setLatencies(newLatencies);
     setIsLoadingLatency(false);
-  }, [sources]);
+  }, [sources, getSourcePingUrl]);
 
   // Memoized display episodes - reversed if toggle is on
   const displayEpisodes = useMemo(() => {
